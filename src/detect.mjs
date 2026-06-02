@@ -41,7 +41,9 @@ function shellQuote(s) {
 }
 
 async function probeVersion(cmd) {
-  const probe = await run("/bin/sh", ["-c", `${cmd} --version`], { capture: true });
+  const probe = process.platform === "win32"
+    ? await run("cmd.exe", ["/d", "/s", "/c", `${cmd} --version`], { capture: true })
+    : await run("/bin/sh", ["-c", `${cmd} --version`], { capture: true });
   if (probe.code !== 0) return null;
   const line = (probe.stdout || probe.stderr)
     .split(/\r?\n/)

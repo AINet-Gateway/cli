@@ -217,6 +217,17 @@ function readManagedOriginalModelProvider(text) {
   }
 }
 
+function readOriginalModelProvider(previous) {
+  const managedOriginal = readManagedOriginalModelProvider(previous);
+  if (managedOriginal) {
+    return { provider: managedOriginal, captured: false };
+  }
+  return {
+    provider: readTopLevelModelProvider(stripCodexBlock(previous)) ?? "openai",
+    captured: true
+  };
+}
+
 function codexAuthCommand() {
   if (process.platform === "win32") {
     return [
@@ -253,20 +264,18 @@ function codexBlock(baseUrl, originalModelProvider) {
 export async function applyCodexAinet({ baseUrl, dryRun = false }) {
   const file = codexConfigPath();
   const previous = await readText(file);
-  const hadBlock = previous.includes(`# >>> ${SECTION_MARKER}`);
-  const originalModelProvider = hadBlock
-    ? readManagedOriginalModelProvider(previous)
-    : readTopLevelModelProvider(previous) ?? "openai";
+  const original = readOriginalModelProvider(previous);
+  const originalModelProvider = original.provider;
   const stripped = stripCodexAinetProviderTables(stripTopLevelModelProvider(stripCodexBlock(previous)));
   const block = codexBlock(baseUrl, originalModelProvider);
   const next = insertTopLevelModelProvider(stripped, "ainet") + "\n" + block;
   if (dryRun) {
-    return { file, backup: null, dryRun: true, originalModelProvider, capturedOriginal: !hadBlock, content: next };
+    return { file, backup: null, dryRun: true, originalModelProvider, capturedOriginal: original.captured, content: next };
   }
   await fs.mkdir(path.dirname(file), { recursive: true });
   const backup = await backupFile(file);
   await writeSecure(file, next);
-  return { file, backup, originalModelProvider, capturedOriginal: !hadBlock };
+  return { file, backup, originalModelProvider, capturedOriginal: original.captured };
 }
 
 export async function restoreCodexSubscription({ originalModelProvider, dryRun = false } = {}) {

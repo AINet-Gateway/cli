@@ -108,6 +108,42 @@ test("applyCodexAinet replaces existing unmarked AINet provider tables", async (
   });
 });
 
+test("applyCodexAinet preserves top-level provider when upgrading old managed block", async () => {
+  await withTempHome(async (home) => {
+    const configFile = path.join(home, ".codex", "config.toml");
+    await fs.mkdir(path.dirname(configFile), { recursive: true });
+    await fs.writeFile(
+      configFile,
+      [
+        'model_provider = "azure"',
+        "",
+        "# >>> ainet-managed",
+        "# Written by an older AINet CLI.",
+        "[model_providers.ainet]",
+        'name = "AINet Gateway"',
+        'base_url = "https://old.example/openai/v1"',
+        "# <<< ainet-managed",
+        "",
+        "[profiles.default]",
+        'model = "gpt-5"',
+        ""
+      ].join("\n")
+    );
+
+    const { applyCodexAinet, restoreCodexSubscription } = await import(
+      `./config.mjs?upgrade-old-managed=${Date.now()}`
+    );
+    const applied = await applyCodexAinet({ baseUrl: "https://gateway.example" });
+
+    assert.equal(applied.originalModelProvider, "azure");
+    assert.equal(applied.capturedOriginal, true);
+
+    const restored = await restoreCodexSubscription({ dryRun: true });
+    assert.match(restored.content, /^model_provider = "azure"$/m);
+    assert.doesNotMatch(restored.content, /^model_provider = "openai"$/m);
+  });
+});
+
 test("applyCodexAinet uses Windows-compatible auth helper on win32", async () => {
   await withTempHome(async () => {
     await withPlatform("win32", async () => {
