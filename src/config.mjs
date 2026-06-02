@@ -6,6 +6,8 @@ import { backupFile } from "./state.mjs";
 
 const SECTION_MARKER = "ainet-managed";
 const CLAUDE_MANAGED_ENV_KEYS = ["ANTHROPIC_BASE_URL", "ANTHROPIC_AUTH_TOKEN"];
+const MODEL_PROVIDER_LINE_RE =
+  /^(\s*)model_provider\s*=\s*("(?:[^"\\]|\\.)*"|'[^']*')\s*(?:#.*)?$/;
 
 export function claudeSettingsPath() {
   return path.join(os.homedir(), ".claude", "settings.json");
@@ -127,7 +129,7 @@ function stripTopLevelModelProvider(text) {
   let seenTable = false;
   for (const line of lines) {
     if (!seenTable && line.trim().startsWith("[")) seenTable = true;
-    if (!seenTable && /^\s*model_provider\s*=\s*"[^"]*"\s*$/.test(line)) continue;
+    if (!seenTable && MODEL_PROVIDER_LINE_RE.test(line)) continue;
     out.push(line);
   }
   return out.join("\n").replace(/\n{3,}/g, "\n\n").trimEnd();
@@ -155,10 +157,32 @@ function readTopLevelModelProvider(text) {
   for (const rawLine of stripped.split(/\r?\n/)) {
     const line = rawLine.trim();
     if (line.startsWith("[")) break;
-    const m = line.match(/^model_provider\s*=\s*"([^"]*)"/);
-    if (m) return m[1];
+    const m = line.match(MODEL_PROVIDER_LINE_RE);
+    if (m) return parseTomlString(m[2]);
   }
   return null;
+}
+
+function parseTomlString(value) {
+  if (value.startsWith("'")) return value.slice(1, -1);
+  try {
+    return JSON.parse(value);
+  } catch {
+    return null;
+  }
+}
+
+function replaceTopLevelModelProvider(text, provider) {
+  const lines = text.split(/\r?\n/);
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i].trim();
+    if (line.startsWith("[")) break;
+    if (MODEL_PROVIDER_LINE_RE.test(lines[i])) {
+      lines[i] = `model_provider = "${provider}"`;
+      return { changed: true, text: lines.join("\n").replace(/\n{3,}/g, "\n\n").trimEnd() };
+    }
+  }
+  return { changed: false, text };
 }
 
 function readManagedOriginalModelProvider(text) {
@@ -234,12 +258,9 @@ export async function restoreCodexSubscription({ originalModelProvider, dryRun =
   }
   const target = originalModelProvider || readManagedOriginalModelProvider(previous) || "openai";
   let stripped = stripCodexBlock(previous);
-  const hasTopLevel = readTopLevelModelProvider(stripped) !== null;
-  if (hasTopLevel) {
-    stripped = stripped.replace(
-      /^(\s*)model_provider\s*=\s*"[^"]*"/m,
-      `$1model_provider = "${target}"`
-    );
+  const replaced = replaceTopLevelModelProvider(stripped, target);
+  if (replaced.changed) {
+    stripped = replaced.text;
   } else {
     const lines = stripped.split(/\r?\n/);
     let insertAt = 0;
