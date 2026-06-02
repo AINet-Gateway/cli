@@ -27,8 +27,6 @@ async function runUse(args, { dryRun = false } = {}) {
   }
   const { switchTo, reportSwitch, TOOLS } = await import("../src/swap.mjs");
   const { readState } = await import("../src/state.mjs");
-  const { readFile } = await import("node:fs/promises");
-  const { codexTokenPath } = await import("../src/state.mjs");
   const { gatewayUrl } = await import("../src/deviceCode.mjs");
 
   const tools = args[1] ? [args[1]] : TOOLS;
@@ -41,17 +39,9 @@ async function runUse(args, { dryRun = false } = {}) {
   }
   const state = await readState();
   const baseUrl = process.env.AINET_GATEWAY_URL ? gatewayUrl() : state.gateway;
-  let apiKey = null;
-  if (target === "ainet") {
-    try {
-      apiKey = (await readFile(codexTokenPath(), "utf8")).trim() || null;
-    } catch {
-      apiKey = null;
-    }
-  }
   for (const tool of tools) {
     try {
-      const result = await switchTo(tool, target, { gateway: baseUrl, apiKey, dryRun });
+      const result = await switchTo(tool, target, { gateway: baseUrl, dryRun });
       await reportSwitch(result);
     } catch (err) {
       printError(`${tool}: ${err.message}`);

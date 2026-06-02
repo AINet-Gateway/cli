@@ -62,12 +62,14 @@ Source: https://github.com/AINet-Gateway/cli
     scopesHint: "These are the standard least-privilege scopes for the selected tools. Use Advanced only if you want to change them manually.",
     advancedScopes: "Advanced: customize the key scopes?",
     selectScopes: "Select the scopes to request for this key.",
+    requiredScopesMissing:
+      "Selected scopes cannot run the selected tools. Add the required scopes: {scopes}",
     promptHintToggle: "Space to toggle, Enter to confirm.",
     dryRunPreview: "Dry run - previewing AINet activation...",
     planRequestDeviceCode:
       "Authorization: device-code request to {url}/user/v1/device-codes (scopes: {scopes})",
     planOpenBrowser: "Approval: browser opens {url}/panel/connect",
-    planSaveKey: "Key storage: ~/.ainet/codex-token (0600)",
+    planSaveKey: "Key storage: tool-specific files under ~/.ainet/ (0600)",
     planWriteClaude:
       "Claude Code: {file} gets ANTHROPIC_BASE_URL={url}/anthropic + ANTHROPIC_AUTH_TOKEN",
     planWriteCodex:
@@ -210,12 +212,14 @@ Source: https://github.com/AINet-Gateway/cli
     scopesHint: "Это стандартные least-privilege scopes для выбранных инструментов. Advanced нужен только если хотите изменить их вручную.",
     advancedScopes: "Дополнительно: настроить scopes ключа?",
     selectScopes: "Выберите scopes для нового ключа.",
+    requiredScopesMissing:
+      "Выбранные scopes не подходят для выбранных инструментов. Добавьте обязательные scopes: {scopes}",
     promptHintToggle: "Space - переключить, Enter - подтвердить.",
     dryRunPreview: "Dry run - показываю план активации AINet...",
     planRequestDeviceCode:
       "Авторизация: device-code запрос к {url}/user/v1/device-codes (scopes: {scopes})",
     planOpenBrowser: "Подтверждение: браузер откроет {url}/panel/connect",
-    planSaveKey: "Ключ: ~/.ainet/codex-token (права 0600)",
+    planSaveKey: "Ключ: отдельные файлы инструментов в ~/.ainet/ (права 0600)",
     planWriteClaude:
       "Claude Code: {file} получит ANTHROPIC_BASE_URL={url}/anthropic + ANTHROPIC_AUTH_TOKEN",
     planWriteCodex:
