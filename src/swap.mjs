@@ -16,6 +16,7 @@ import { ok, step, warn } from "./util.mjs";
 export const TOOLS = ["claude", "codex"];
 
 const SECTION_MARKER = "ainet-managed";
+const CODEX_REQUIRED_SCOPES = ["openai:responses", "openai:chat_completions", "openai:models"];
 
 async function fileHasAinet(tool) {
   try {
@@ -50,6 +51,12 @@ async function requireAinetKey(apiKey, { dryRun = false } = {}) {
     throw new Error(t("noAinetKey"));
   }
   return key;
+}
+
+function hasRequiredScopes(scopes, required) {
+  if (!Array.isArray(scopes)) return false;
+  const set = new Set(scopes);
+  return required.every((scope) => set.has(scope));
 }
 
 export async function currentMode(tool) {
@@ -88,7 +95,11 @@ export async function switchTo(tool, target, { gateway, apiKey, dryRun = false }
 
   if (tool === "codex") {
     if (target === "ainet") {
+      const state = await readState();
       await requireAinetKey(null, { dryRun });
+      if (!dryRun && !hasRequiredScopes(state.tools?.codex?.keyScopes, CODEX_REQUIRED_SCOPES)) {
+        throw new Error(t("codexKeyMissingScopes"));
+      }
       const res = await applyCodexAinet({ baseUrl, dryRun });
       changes.push(t("setCodex", { file: res.file }));
       if (res.backup) changes.push(t("backupConfig", { file: res.backup }));

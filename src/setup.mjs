@@ -117,12 +117,19 @@ export async function runSetup({ dryRun = false } = {}) {
       return;
     }
     if (installChoice.action === "install") {
+      const failedTools = new Set();
       for (const tool of missingTools) {
         try {
           await ensureInstalled(tool, installed[tool], { dryRun });
         } catch (err) {
+          failedTools.add(tool);
           await warn(t("skippingTool", { tool, message: err.message }));
         }
+      }
+      toolsToSetup = toolsToSetup.filter((tool) => !failedTools.has(tool));
+      if (toolsToSetup.length === 0) {
+        await warn(t("noToolsAfterInstallSkip"));
+        return;
       }
     } else {
       await warn(t("installMissingSkipped", { tools: missingLabels }));
@@ -274,7 +281,6 @@ export async function runSetup({ dryRun = false } = {}) {
 
   await step(t("activatingAinet"));
   const baseUrl = gatewayUrl();
-  await saveAinetKey(polled.api_key);
   const state = await readState();
   state.gateway = baseUrl;
   await writeState(state);
@@ -285,9 +291,10 @@ export async function runSetup({ dryRun = false } = {}) {
     await updateToolState("claude", { mode: "ainet", gateway: baseUrl, keyPrefix: polled.key_prefix });
   }
   if (toolsToSetup.includes("codex")) {
+    await saveAinetKey(polled.api_key);
     const res = await applyCodexAinet({ baseUrl });
     await ok(t("activatedTool", { label: "Codex", file: res.file }));
-    const patch = { mode: "ainet", gateway: baseUrl, keyPrefix: polled.key_prefix };
+    const patch = { mode: "ainet", gateway: baseUrl, keyPrefix: polled.key_prefix, keyScopes: scopes };
     if (res.capturedOriginal) patch.originalModelProvider = res.originalModelProvider;
     await updateToolState("codex", patch);
   }

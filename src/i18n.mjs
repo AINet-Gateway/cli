@@ -134,6 +134,8 @@ Source: https://github.com/AINet-Gateway/cli
     switchPrompt: "Switch a tool?",
     noChanges: "No changes made.",
     noAinetKey: "No AINet key available - run `ainet setup` first to authorize this device.",
+    codexKeyMissingScopes:
+      "The saved AINet key is not authorized for Codex. Run `ainet setup` and select Codex.",
     unknownMode: "Unknown mode: {mode}",
     setClaude: "set ANTHROPIC_BASE_URL={url}/anthropic + ANTHROPIC_AUTH_TOKEN in {file}",
     backupSettings: "backed up previous settings -> {file}",
@@ -280,6 +282,8 @@ Source: https://github.com/AINet-Gateway/cli
     switchPrompt: "Переключить инструмент?",
     noChanges: "Изменений нет.",
     noAinetKey: "Ключ AINet не найден - сначала запустите `ainet setup`, чтобы авторизовать устройство.",
+    codexKeyMissingScopes:
+      "Сохранённый ключ AINet не подходит для Codex. Запустите `ainet setup` и выберите Codex.",
     unknownMode: "Неизвестный режим: {mode}",
     setClaude: "записать ANTHROPIC_BASE_URL={url}/anthropic + ANTHROPIC_AUTH_TOKEN в {file}",
     backupSettings: "backup предыдущих settings -> {file}",

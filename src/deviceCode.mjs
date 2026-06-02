@@ -18,7 +18,7 @@ export class DeviceCodeError extends Error {
 async function jsonRequest(path, init = {}, { timeoutMs = 30_000 } = {}) {
   const url = `${gatewayUrl()}${path}`;
   const controller = new AbortController();
-  const t = setTimeout(() => controller.abort(), timeoutMs);
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
   let resp;
   try {
     debug(`→ ${init.method ?? "GET"} ${url}`);
@@ -37,7 +37,7 @@ async function jsonRequest(path, init = {}, { timeoutMs = 30_000 } = {}) {
       { status: 0 }
     );
   } finally {
-    clearTimeout(t);
+    clearTimeout(timeout);
   }
   const text = await resp.text();
   let body = null;

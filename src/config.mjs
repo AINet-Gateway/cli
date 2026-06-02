@@ -2,7 +2,7 @@ import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
-import { backupFile, codexTokenPath } from "./state.mjs";
+import { backupFile } from "./state.mjs";
 
 const SECTION_MARKER = "ainet-managed";
 const CLAUDE_MANAGED_ENV_KEYS = ["ANTHROPIC_BASE_URL", "ANTHROPIC_AUTH_TOKEN"];
@@ -133,6 +133,20 @@ function stripTopLevelModelProvider(text) {
   return out.join("\n").replace(/\n{3,}/g, "\n\n").trimEnd();
 }
 
+function insertTopLevelModelProvider(text, provider) {
+  const line = `model_provider = "${provider}"`;
+  if (!text.trim()) return `${line}\n`;
+
+  const lines = text.split(/\r?\n/);
+  let insertAt = 0;
+  for (let i = 0; i < lines.length; i++) {
+    if (lines[i].trim().startsWith("[")) break;
+    if (lines[i].trim() !== "") insertAt = i + 1;
+  }
+  lines.splice(insertAt, 0, line);
+  return lines.join("\n").replace(/\n{3,}/g, "\n\n").trimEnd() + "\n";
+}
+
 function readTopLevelModelProvider(text) {
   const stripped = text.replace(
     new RegExp(`# >>> ${SECTION_MARKER}[\\s\\S]*?# <<< ${SECTION_MARKER}`, "g"),
@@ -159,15 +173,25 @@ function readManagedOriginalModelProvider(text) {
   }
 }
 
+function codexAuthCommand() {
+  if (process.platform === "win32") {
+    return [
+      `command = "cmd.exe"`,
+      `args = ["/d", "/s", "/c", "type \\"%USERPROFILE%\\\\.ainet\\\\codex-token\\""]`
+    ];
+  }
+  return [
+    `command = "/bin/sh"`,
+    `args = ["-c", "cat \\"$HOME/.ainet/codex-token\\""]`
+  ];
+}
+
 function codexBlock(baseUrl, originalModelProvider) {
-  const tokenFile = codexTokenPath();
   return [
     `# >>> ${SECTION_MARKER}`,
     `# Written by @ainet/cli at ${new Date().toISOString()}.`,
     `# Switch back to your subscription with \`ainet use subscription codex\`.`,
     `# original_model_provider = ${JSON.stringify(originalModelProvider || "openai")}`,
-    `model_provider = "ainet"`,
-    ``,
     `[model_providers.ainet]`,
     `name = "AINet Gateway"`,
     `base_url = "${baseUrl}/openai/v1"`,
@@ -175,8 +199,7 @@ function codexBlock(baseUrl, originalModelProvider) {
     `requires_openai_auth = false`,
     ``,
     `[model_providers.ainet.auth]`,
-    `command = "/bin/sh"`,
-    `args = ["-c", "cat \\"$HOME/.ainet/codex-token\\""]`,
+    ...codexAuthCommand(),
     `timeout_ms = 5000`,
     `# <<< ${SECTION_MARKER}`,
     ``
@@ -192,7 +215,7 @@ export async function applyCodexAinet({ baseUrl, dryRun = false }) {
     : readTopLevelModelProvider(previous) ?? "openai";
   const stripped = stripTopLevelModelProvider(stripCodexBlock(previous));
   const block = codexBlock(baseUrl, originalModelProvider);
-  const next = (stripped ? stripped + "\n\n" : "") + block;
+  const next = insertTopLevelModelProvider(stripped, "ainet") + "\n" + block;
   if (dryRun) {
     return { file, backup: null, dryRun: true, originalModelProvider, capturedOriginal: !hadBlock, content: next };
   }
