@@ -14,6 +14,16 @@ export function codexTokenPath() {
   return path.join(ainetDir(), "codex-token");
 }
 
+export function claudeTokenPath() {
+  return path.join(ainetDir(), "claude-token");
+}
+
+export function toolTokenPath(tool) {
+  if (tool === "claude") return claudeTokenPath();
+  if (tool === "codex") return codexTokenPath();
+  throw new Error(`Unknown tool: ${tool}`);
+}
+
 export function backupsDir() {
   return path.join(ainetDir(), "backups");
 }
@@ -61,8 +71,12 @@ export async function updateToolState(tool, patch) {
 }
 
 export async function saveAinetKey(key) {
+  return saveToolKey("codex", key);
+}
+
+export async function saveToolKey(tool, key) {
   await fs.mkdir(ainetDir(), { recursive: true });
-  const file = codexTokenPath();
+  const file = toolTokenPath(tool);
   await fs.writeFile(file, key, { mode: 0o600 });
   await fs.chmod(file, 0o600);
   return file;

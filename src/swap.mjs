@@ -10,7 +10,7 @@ import {
 } from "./config.mjs";
 import { gatewayUrl } from "./deviceCode.mjs";
 import { t } from "./i18n.mjs";
-import { codexTokenPath, readState, updateToolState } from "./state.mjs";
+import { readState, toolTokenPath, updateToolState } from "./state.mjs";
 import { ok, step, warn } from "./util.mjs";
 
 export const TOOLS = ["claude", "codex"];
@@ -35,18 +35,18 @@ async function fileHasAinet(tool) {
   return false;
 }
 
-async function readSavedAinetKey() {
+async function readSavedAinetKey(tool) {
   try {
-    const key = (await fs.readFile(codexTokenPath(), "utf8")).trim();
+    const key = (await fs.readFile(toolTokenPath(tool), "utf8")).trim();
     return key || null;
   } catch {
     return null;
   }
 }
 
-async function requireAinetKey(apiKey, { dryRun = false } = {}) {
+async function requireAinetKey(tool, apiKey, { dryRun = false } = {}) {
   if (dryRun) return apiKey ?? "dry-run";
-  const key = apiKey ?? (await readSavedAinetKey());
+  const key = apiKey ?? (await readSavedAinetKey(tool));
   if (!key) {
     throw new Error(t("noAinetKey"));
   }
@@ -76,7 +76,7 @@ export async function switchTo(tool, target, { gateway, apiKey, dryRun = false }
 
   if (tool === "claude") {
     if (target === "ainet") {
-      const key = await requireAinetKey(apiKey, { dryRun });
+      const key = await requireAinetKey("claude", apiKey, { dryRun });
       const res = await applyClaudeAinet({ baseUrl, apiKey: key, dryRun });
       changes.push(t("setClaude", { url: baseUrl, file: res.file }));
       if (res.backup) changes.push(t("backupSettings", { file: res.backup }));
@@ -96,7 +96,7 @@ export async function switchTo(tool, target, { gateway, apiKey, dryRun = false }
   if (tool === "codex") {
     if (target === "ainet") {
       const state = await readState();
-      await requireAinetKey(null, { dryRun });
+      await requireAinetKey("codex", null, { dryRun });
       if (!dryRun && !hasRequiredScopes(state.tools?.codex?.keyScopes, CODEX_REQUIRED_SCOPES)) {
         throw new Error(t("codexKeyMissingScopes"));
       }

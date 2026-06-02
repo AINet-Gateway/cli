@@ -3,13 +3,13 @@ import fs from "node:fs/promises";
 import { checkInstalledTools } from "./detect.mjs";
 import { gatewayUrl } from "./deviceCode.mjs";
 import { t } from "./i18n.mjs";
-import { codexTokenPath, readState } from "./state.mjs";
+import { readState, toolTokenPath } from "./state.mjs";
 import { currentMode, reportSwitch, switchTo, TOOLS } from "./swap.mjs";
 import { ok, step, warn } from "./util.mjs";
 
-async function readAinetKey() {
+async function readAinetKey(tool) {
   try {
-    const key = (await fs.readFile(codexTokenPath(), "utf8")).trim();
+    const key = (await fs.readFile(toolTokenPath(tool), "utf8")).trim();
     return key || null;
   } catch {
     return null;
@@ -48,19 +48,19 @@ export async function runStatus({ dryRun = false } = {}) {
     return;
   }
 
-  const apiKey = await readAinetKey();
   const choices = [];
   let skippedAinet = false;
   for (const r of switchable) {
     const target = r.mode.effective === "ainet" ? "subscription" : "ainet";
     const targetLabel = target === "ainet" ? t("modeAinet") : t("targetSubscription");
+    const apiKey = target === "ainet" ? await readAinetKey(r.tool) : null;
     if (target === "ainet" && !apiKey) {
       skippedAinet = true;
       continue;
     }
     choices.push({
       title: t("switchChoice", { tool: r.tool, target: targetLabel }),
-      value: { tool: r.tool, target }
+      value: { tool: r.tool, target, apiKey }
     });
   }
   if (skippedAinet) {
@@ -84,7 +84,7 @@ export async function runStatus({ dryRun = false } = {}) {
 
   const result = await switchTo(answer.action.tool, answer.action.target, {
     gateway: switchGateway,
-    apiKey,
+    apiKey: answer.action.apiKey,
     dryRun
   });
   await reportSwitch(result);

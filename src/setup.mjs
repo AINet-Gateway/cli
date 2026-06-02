@@ -6,41 +6,16 @@ import { checkInstalledTools, detectPlatform, detectShell } from "./detect.mjs";
 import { applyClaudeAinet, applyCodexAinet } from "./config.mjs";
 import { ensureInstalled } from "./install.mjs";
 import { joinList, t } from "./i18n.mjs";
-import { readState, saveAinetKey, updateToolState, writeState } from "./state.mjs";
+import { ALLOWED_SCOPES, deriveScopes, missingRequiredScopes } from "./scopes.mjs";
+import { readState, saveToolKey, updateToolState, writeState } from "./state.mjs";
 import { smokeTest } from "./smoke.mjs";
 import { clearLine, debug, logo, ok, pending, plan, step, warn } from "./util.mjs";
 
 const CLI_VERSION = "0.2.0";
 
-export const ALLOWED_SCOPES = [
-  "anthropic:messages",
-  "anthropic:models",
-  "anthropic:count_tokens",
-  "openai:responses",
-  "openai:chat_completions",
-  "openai:models",
-  "openai:embeddings",
-  "openai:images",
-  "openai:moderations",
-  "openai:audio"
-];
-
-const SCOPES_BY_TOOL = {
-  claude: ["anthropic:messages", "anthropic:models", "anthropic:count_tokens"],
-  codex: ["openai:responses", "openai:chat_completions", "openai:models"]
-};
-
 async function cancelSetup() {
   await warn(t("setupCancelled"));
   process.exitCode = 1;
-}
-
-export function deriveScopes(tools) {
-  const set = new Set();
-  for (const tool of tools) {
-    for (const scope of SCOPES_BY_TOOL[tool] ?? []) set.add(scope);
-  }
-  return ALLOWED_SCOPES.filter((s) => set.has(s));
 }
 
 export async function runSetup({ dryRun = false } = {}) {
@@ -178,6 +153,11 @@ export async function runSetup({ dryRun = false } = {}) {
     }
     if (picked.scopes.length) scopes = picked.scopes;
   }
+  const missingScopes = missingRequiredScopes(toolsToSetup, scopes);
+  if (missingScopes.length > 0) {
+    await warn(t("requiredScopesMissing", { scopes: missingScopes.join(", ") }));
+    return;
+  }
   debug(`scopes=${scopes.join(",")}`);
   console.log("");
 
@@ -286,12 +266,18 @@ export async function runSetup({ dryRun = false } = {}) {
   await writeState(state);
 
   if (toolsToSetup.includes("claude")) {
+    await saveToolKey("claude", polled.api_key);
     const res = await applyClaudeAinet({ baseUrl, apiKey: polled.api_key });
     await ok(t("activatedTool", { label: "Claude Code", file: res.file }));
-    await updateToolState("claude", { mode: "ainet", gateway: baseUrl, keyPrefix: polled.key_prefix });
+    await updateToolState("claude", {
+      mode: "ainet",
+      gateway: baseUrl,
+      keyPrefix: polled.key_prefix,
+      keyScopes: scopes
+    });
   }
   if (toolsToSetup.includes("codex")) {
-    await saveAinetKey(polled.api_key);
+    await saveToolKey("codex", polled.api_key);
     const res = await applyCodexAinet({ baseUrl });
     await ok(t("activatedTool", { label: "Codex", file: res.file }));
     const patch = { mode: "ainet", gateway: baseUrl, keyPrefix: polled.key_prefix, keyScopes: scopes };

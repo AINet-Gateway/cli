@@ -45,3 +45,36 @@ test("switchTo refuses Codex AINet mode when saved key lacks OpenAI scopes", asy
     );
   });
 });
+
+test("switchTo can restore Claude AINet mode from the Claude-specific saved key", async () => {
+  await withTempHome(async (home) => {
+    const stateDir = path.join(home, ".ainet");
+    await fs.mkdir(stateDir, { recursive: true });
+    await fs.writeFile(path.join(stateDir, "claude-token"), "ak_claude", { mode: 0o600 });
+    await fs.writeFile(
+      path.join(stateDir, "state.json"),
+      JSON.stringify(
+        {
+          gateway: "https://gateway.example",
+          tools: {
+            claude: {
+              mode: "subscription",
+              keyScopes: ["anthropic:messages", "anthropic:models", "anthropic:count_tokens"]
+            }
+          }
+        },
+        null,
+        2
+      )
+    );
+
+    const { switchTo } = await import(`./swap.mjs?claude=${Date.now()}`);
+    await switchTo("claude", "ainet");
+
+    const settings = JSON.parse(
+      await fs.readFile(path.join(home, ".claude", "settings.json"), "utf8")
+    );
+    assert.equal(settings.env.ANTHROPIC_BASE_URL, "https://gateway.example/anthropic");
+    assert.equal(settings.env.ANTHROPIC_AUTH_TOKEN, "ak_claude");
+  });
+});
