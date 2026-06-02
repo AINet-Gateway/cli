@@ -26,4 +26,9 @@ test("missingRequiredScopes rejects custom scopes that cannot run the selected t
     ["Claude Code: anthropic:count_tokens"]
   );
   assert.deepEqual(missingRequiredScopes(["codex"], deriveScopes(["codex"])), []);
+  assert.deepEqual(missingRequiredScopes(["codex"], []), [
+    "Codex CLI: openai:responses",
+    "Codex CLI: openai:chat_completions",
+    "Codex CLI: openai:models"
+  ]);
 });

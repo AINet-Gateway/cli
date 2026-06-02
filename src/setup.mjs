@@ -151,7 +151,7 @@ export async function runSetup({ dryRun = false } = {}) {
       await cancelSetup();
       return;
     }
-    if (picked.scopes.length) scopes = picked.scopes;
+    scopes = picked.scopes;
   }
   const missingScopes = missingRequiredScopes(toolsToSetup, scopes);
   if (missingScopes.length > 0) {
