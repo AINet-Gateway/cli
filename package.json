@@ -1,0 +1,29 @@
+{
+  "name": "@ainet/cli",
+  "version": "0.2.0",
+  "description": "Switch Claude Code and Codex between your own subscription and the AINet Gateway in one keystroke.",
+  "type": "module",
+  "bin": {
+    "ainet": "./bin/ainet.mjs"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "files": [
+    "bin/",
+    "src/",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "test": "node --test src/*.test.mjs"
+  },
+  "dependencies": {
+    "open": "^10.1.0",
+    "picocolors": "^1.1.1",
+    "prompts": "^2.4.2"
+  },
+  "license": "BUSL-1.1",
+  "repository": "github:AINet-Gateway/cli",
+  "homepage": "https://ainet.bytestrike.dev/download"
+}

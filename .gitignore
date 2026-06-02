@@ -1,0 +1,5 @@
+node_modules/
+src/*.test.mjs
+npm-debug.log*
+*.tgz
+.DS_Store
