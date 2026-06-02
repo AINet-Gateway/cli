@@ -74,6 +74,40 @@ test("applyCodexAinet replaces single-quoted model_provider with inline comment"
   });
 });
 
+test("applyCodexAinet replaces existing unmarked AINet provider tables", async () => {
+  await withTempHome(async (home) => {
+    const configFile = path.join(home, ".codex", "config.toml");
+    await fs.mkdir(path.dirname(configFile), { recursive: true });
+    await fs.writeFile(
+      configFile,
+      [
+        'model_provider = "openai"',
+        "",
+        "[model_providers.ainet]",
+        'name = "Old AINet"',
+        'base_url = "https://old.example/openai/v1"',
+        "",
+        "[model_providers.ainet.auth]",
+        'command = "cmd.exe"',
+        'args = ["/d", "/s", "/c", "type old-token"]',
+        "",
+        "[profiles.default]",
+        'model = "gpt-5"',
+        ""
+      ].join("\n")
+    );
+
+    const { applyCodexAinet } = await import(`./config.mjs?dedupe=${Date.now()}`);
+    const res = await applyCodexAinet({ baseUrl: "https://gateway.example", dryRun: true });
+
+    assert.equal(res.content.match(/^\[model_providers\.ainet\]$/gm)?.length, 1, res.content);
+    assert.equal(res.content.match(/^\[model_providers\.ainet\.auth\]$/gm)?.length, 1, res.content);
+    assert.doesNotMatch(res.content, /https:\/\/old\.example/);
+    assert.match(res.content, /https:\/\/gateway\.example\/openai\/v1/);
+    assert.match(res.content, /^\[profiles\.default\]$/m);
+  });
+});
+
 test("applyCodexAinet uses Windows-compatible auth helper on win32", async () => {
   await withTempHome(async () => {
     await withPlatform("win32", async () => {

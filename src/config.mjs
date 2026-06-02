@@ -8,6 +8,8 @@ const SECTION_MARKER = "ainet-managed";
 const CLAUDE_MANAGED_ENV_KEYS = ["ANTHROPIC_BASE_URL", "ANTHROPIC_AUTH_TOKEN"];
 const MODEL_PROVIDER_LINE_RE =
   /^(\s*)model_provider\s*=\s*("(?:[^"\\]|\\.)*"|'[^']*')\s*(?:#.*)?$/;
+const AINET_MODEL_PROVIDER_TABLE_RE =
+  /^\s*\[\s*model_providers\s*\.\s*ainet(?:\s*\.[^\]]+)?\s*\]\s*(?:#.*)?$/;
 
 export function claudeSettingsPath() {
   return path.join(os.homedir(), ".claude", "settings.json");
@@ -135,6 +137,24 @@ function stripTopLevelModelProvider(text) {
   return out.join("\n").replace(/\n{3,}/g, "\n\n").trimEnd();
 }
 
+function stripCodexAinetProviderTables(text) {
+  const lines = text.split(/\r?\n/);
+  const out = [];
+  let inAinetProviderTable = false;
+  for (const line of lines) {
+    const startsTable = line.trim().startsWith("[");
+    if (AINET_MODEL_PROVIDER_TABLE_RE.test(line)) {
+      inAinetProviderTable = true;
+      continue;
+    }
+    if (inAinetProviderTable && startsTable) {
+      inAinetProviderTable = false;
+    }
+    if (!inAinetProviderTable) out.push(line);
+  }
+  return out.join("\n").replace(/\n{3,}/g, "\n\n").trimEnd();
+}
+
 function insertTopLevelModelProvider(text, provider) {
   const line = `model_provider = "${provider}"`;
   if (!text.trim()) return `${line}\n`;
@@ -237,7 +257,7 @@ export async function applyCodexAinet({ baseUrl, dryRun = false }) {
   const originalModelProvider = hadBlock
     ? readManagedOriginalModelProvider(previous)
     : readTopLevelModelProvider(previous) ?? "openai";
-  const stripped = stripTopLevelModelProvider(stripCodexBlock(previous));
+  const stripped = stripCodexAinetProviderTables(stripTopLevelModelProvider(stripCodexBlock(previous)));
   const block = codexBlock(baseUrl, originalModelProvider);
   const next = insertTopLevelModelProvider(stripped, "ainet") + "\n" + block;
   if (dryRun) {
@@ -257,7 +277,7 @@ export async function restoreCodexSubscription({ originalModelProvider, dryRun =
     return { file, backup: null, changed: false };
   }
   const target = originalModelProvider || readManagedOriginalModelProvider(previous) || "openai";
-  let stripped = stripCodexBlock(previous);
+  let stripped = stripCodexAinetProviderTables(stripCodexBlock(previous));
   const replaced = replaceTopLevelModelProvider(stripped, target);
   if (replaced.changed) {
     stripped = replaced.text;
