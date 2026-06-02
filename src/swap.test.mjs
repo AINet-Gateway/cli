@@ -106,3 +106,44 @@ test("switchTo does not use a saved Codex token for Claude AINet mode", async ()
     await assert.rejects(() => switchTo("claude", "ainet"), /No AINet key|Ключ AINet/);
   });
 });
+
+test("currentMode ignores Claude overrides without the managed marker", async () => {
+  await withTempHome(async (home) => {
+    const stateDir = path.join(home, ".ainet");
+    const claudeDir = path.join(home, ".claude");
+    await fs.mkdir(stateDir, { recursive: true });
+    await fs.mkdir(claudeDir, { recursive: true });
+    await fs.writeFile(
+      path.join(claudeDir, "settings.json"),
+      JSON.stringify(
+        {
+          env: {
+            ANTHROPIC_BASE_URL: "https://custom.example/anthropic",
+            ANTHROPIC_AUTH_TOKEN: "custom-token"
+          }
+        },
+        null,
+        2
+      )
+    );
+    await fs.writeFile(
+      path.join(stateDir, "state.json"),
+      JSON.stringify(
+        {
+          tools: {
+            claude: {
+              mode: "ainet"
+            }
+          }
+        },
+        null,
+        2
+      )
+    );
+
+    const { currentMode } = await import(`./swap.mjs?claude-custom=${Date.now()}`);
+    const mode = await currentMode("claude");
+
+    assert.deepEqual(mode, { recorded: "ainet", effective: "subscription", drift: true });
+  });
+});

@@ -23,7 +23,9 @@ async function fileHasAinet(tool) {
     if (tool === "claude") {
       const raw = await fs.readFile(claudeSettingsPath(), "utf8");
       const json = JSON.parse(raw);
-      return Boolean(json?.env?.ANTHROPIC_BASE_URL && json?.env?.ANTHROPIC_AUTH_TOKEN);
+      return Boolean(
+        json?.[SECTION_MARKER] && json?.env?.ANTHROPIC_BASE_URL && json?.env?.ANTHROPIC_AUTH_TOKEN
+      );
     }
     if (tool === "codex") {
       const raw = await fs.readFile(codexConfigPath(), "utf8");
