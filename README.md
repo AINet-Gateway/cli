@@ -105,9 +105,10 @@ Every claim here is verifiable in this repo:
 - **It never reads or moves your subscription login.** No code path opens the
   Claude Code Keychain item or `~/.codex/auth.json` to read it, and it never
   runs `claude /logout`. Switching is pure config override.
-- **It phones home only to your gateway.** The only network calls are the
+- **It has no analytics or telemetry.** AINet-specific network calls are the
   device-code auth and selected provider `/models` smoke tests, both to the
-  gateway URL you see. No analytics, no telemetry.
+  gateway URL you see. If you ask setup to install missing tools, it also
+  downloads those tools through their official installers.
 - **Your key never leaks.** It goes from the one-time auth response into a
   `0600` file and the tool config — never printed after handoff, never into your
   shell history or shell env.
