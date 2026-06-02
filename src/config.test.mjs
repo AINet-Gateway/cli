@@ -51,6 +51,29 @@ test("applyCodexAinet writes model_provider before TOML tables", async () => {
   });
 });
 
+test("applyCodexAinet replaces single-quoted model_provider with inline comment", async () => {
+  await withTempHome(async (home) => {
+    const configFile = path.join(home, ".codex", "config.toml");
+    await fs.mkdir(path.dirname(configFile), { recursive: true });
+    await fs.writeFile(
+      configFile,
+      "model_provider = 'openai' # user comment\n\n[profiles.default]\nmodel = \"gpt-5\"\n"
+    );
+
+    const { applyCodexAinet } = await import(`./config.mjs?single-quoted=${Date.now()}`);
+    const res = await applyCodexAinet({ baseUrl: "https://gateway.example", dryRun: true });
+
+    assert.equal(
+      res.content.match(/^model_provider\s*=/gm)?.length,
+      1,
+      res.content
+    );
+    assert.match(res.content, /^model_provider = "ainet"$/m);
+    assert.doesNotMatch(res.content, /model_provider = 'openai'/);
+    assert.match(res.content, /^# original_model_provider = "openai"$/m);
+  });
+});
+
 test("applyCodexAinet uses Windows-compatible auth helper on win32", async () => {
   await withTempHome(async () => {
     await withPlatform("win32", async () => {
