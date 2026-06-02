@@ -10,6 +10,7 @@ user, no admin rights required.
 ## First run
 
 ```sh
+npm install -g github:AINet-Gateway/cli
 ainet setup
 ```
 
